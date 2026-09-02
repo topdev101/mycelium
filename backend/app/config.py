@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _default_db_path() -> str:
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        return "/tmp/mycelium.db"
+    return "mycelium.db"
 
 
 class Settings(BaseSettings):
@@ -17,7 +25,7 @@ class Settings(BaseSettings):
     openai_base_url: str | None = None
     request_timeout: float = 40.0
 
-    db_path: str = "mycelium.db"
+    db_path: str = Field(default_factory=_default_db_path)
 
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 

@@ -132,6 +132,41 @@ OPENAI_MODEL=gpt-4o-mini      # any chat model; JSON mode is used for expansion
 
 Restart the backend. The status pill turns from **Demo mode** to the model name.
 
+## Deploy to Vercel
+
+The frontend and backend deploy as **two Vercel projects** from this one repo
+(mixing Next.js and Python in a single project is unreliable). Deploy the backend
+first, then point the frontend at it.
+
+### 1. Backend — FastAPI on Vercel's Python runtime
+
+- New Vercel Project → import this repo → **Root Directory: `backend`**.
+- Project **Settings → Python Version → 3.12** (the code needs 3.10+).
+- **Environment Variables:**
+  - `OPENAI_API_KEY` = your key
+  - `OPENAI_MODEL` = `gpt-4o-mini`
+- Deploy, then copy the URL (e.g. `https://mycelium-api.vercel.app`).
+
+`backend/vercel.json` routes every request to `api/index.py`, which serves the
+FastAPI app; `config.py` auto-switches SQLite to `/tmp` when running on Vercel.
+
+### 2. Frontend — Next.js
+
+- New Vercel Project → same repo → **Root Directory: `frontend`**.
+- **Environment Variable:** `NEXT_PUBLIC_API_BASE` = the backend URL from step 1.
+- Deploy. `next.config.mjs` proxies `/api/*` to that backend server-side (so the
+  browser stays same-origin — no CORS to configure).
+
+### Serverless caveats (by design)
+
+- **Saved maps are ephemeral.** SQLite lives in `/tmp`, which resets on cold
+  starts and isn't shared across instances — exploring works fully, only
+  save/load is affected. Swap `db.py` to **Vercel Postgres** for durable maps.
+- **Streaming** may arrive in one burst if the proxy buffers it (the content is
+  identical). For token-by-token in production, call the backend directly and set
+  `CORS_ORIGINS` to the frontend's domain.
+- The **API key** lives only in Vercel's env vars — it is never in the repo.
+
 ## Tech notes worth a look
 
 | Concern | Where | Why it's interesting |
@@ -156,6 +191,8 @@ mycelium/
 │  │  ├─ models.py      Pydantic schemas (the API contract)
 │  │  ├─ db.py          SQLite persistence
 │  │  └─ config.py      env-driven settings
+│  ├─ api/index.py      Vercel serverless entrypoint (serves the FastAPI app)
+│  ├─ vercel.json       Vercel routing: all requests → FastAPI
 │  └─ requirements.txt
 └─ frontend/
    ├─ app/              layout, page, global styles
