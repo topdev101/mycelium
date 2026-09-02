@@ -53,8 +53,6 @@ export function exportGraphPng(
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.restore();
-  ctx.scale(scale, scale);
-  ctx.translate(-minX + pad, -minY + pad);
 
   const byId = new Map(nodes.map((n) => [n.id, n]));
   for (const e of edges) {
